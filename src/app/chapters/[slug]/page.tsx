@@ -121,7 +121,13 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
               <div className="mt-6 h-1 w-20 bg-black mx-auto"></div>
             </header>
 
-            <section className="prose prose-slate lg:prose-xl prose-headings:font-serif prose-p:leading-relaxed mx-auto">
+            <section 
+                className="
+                    prose prose-slate lg:prose-xl mx-auto                    
+                    prose-p:leading-loose   /* Increases line-height for easier reading */
+                    prose-headings:font-serif
+                "
+                >
               <ReactMarkdown>{ch.content}</ReactMarkdown>
             </section>
           </article>
