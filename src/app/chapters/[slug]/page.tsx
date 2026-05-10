@@ -1,59 +1,88 @@
 'use client';
 
 import { useSession, SignInButton } from '@clerk/nextjs';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useTransition } from 'react';
 import { createClerkSupabaseClient } from '@/lib/supabase';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { useInView } from 'react-intersection-observer';
 
 export default function ChapterPage({ params }: { params: Promise<{ slug: string }> }) {
-  // 1. Unwrap the dynamic route params
-  const { slug } = use(params);
-  
-  // 2. Auth and State
+  const { slug: initialSlug } = use(params);
   const { session, isLoaded } = useSession();
-  const [chapter, setChapter] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // 1. Change single chapter to an Array for infinite scroll
+  const [chapters, setChapters] = useState<any[]>([]);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [isPending, startTransition] = useTransition();
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Wait for Clerk to load the session
-    if (!isLoaded) return;
+  // 2. Setup the "Bottom of Page" trigger
+  const { ref, inView } = useInView({
+    rootMargin: '400px', // Fetch when reader is 400px from the bottom
+  });
 
-    // If no session, stop loading (the UI will show the Login prompt)
-    if (!session) {
-      setLoading(false);
+  // Initial Data Load
+  useEffect(() => {
+    if (!isLoaded || !session) {
+      if (isLoaded && !session) setLoadingInitial(false);
       return;
     }
 
-    const fetchData = async () => {
+    const fetchInitial = async () => {
       try {
-        setLoading(true);
         const supabase = createClerkSupabaseClient(session);
-        
         const { data, error: sbError } = await supabase
           .from('chapters')
-          .select('content, front_matter, published_at')
-          .eq('slug', slug)
+          .select('*')
+          .eq('slug', initialSlug)
           .single();
 
         if (sbError) throw sbError;
-        if (!data) throw new Error("Chapter not found");
-
-        setChapter(data);
+        setChapters([data]);
       } catch (err: any) {
-        console.error("Fetch error:", err);
-        setError(err.message || "Failed to load chapter.");
+        setError(err.message);
       } finally {
-        setLoading(false);
+        setLoadingInitial(false);
       }
     };
 
-    fetchData();
-  }, [session, isLoaded, slug]);
+    fetchInitial();
+  }, [session, isLoaded, initialSlug]);
 
-  // 3. Render States
-  if (!isLoaded || loading) {
+  // 3. The Infinite Scroll Logic (Slug + 1)
+  useEffect(() => {
+    if (inView && hasMore && !isPending && chapters.length > 0) {
+      loadNextChapter();
+    }
+  }, [inView, hasMore, isPending]);
+
+  const loadNextChapter = () => {
+    startTransition(async () => {
+      if (!session) return;
+      
+      const lastSlug = parseInt(chapters[chapters.length - 1].slug);
+      const nextSlug = lastSlug + 1;
+      
+      const supabase = createClerkSupabaseClient(session);
+      const { data } = await supabase
+        .from('chapters')
+        .select('*')
+        .eq('slug', nextSlug.toString())
+        .maybeSingle();
+
+      if (data) {
+        setChapters((prev) => [...prev, data]);
+        // UX: Update browser URL as reader progresses
+        window.history.replaceState(null, '', `/chapters/${nextSlug}`);
+      } else {
+        setHasMore(false);
+      }
+    });
+  };
+
+  if (!isLoaded || loadingInitial) {
     return <div className="flex justify-center items-center min-h-screen text-gray-500">Opening the chronicles...</div>;
   }
 
@@ -68,53 +97,51 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
     );
   }
 
-  if (error || !chapter) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
-        <h2 className="text-xl text-red-600 mb-4">{error || "Chapter not found."}</h2>
-        <Link href="/" className="text-blue-600 underline">Return Home</Link>
-      </div>
-    );
-  }
-
-  // 4. Successful Reader View
   return (
     <main className="min-h-screen bg-white">
-      {/* Sticky Header */}
       <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <Link href="/" className="font-serif font-bold text-lg hover:opacity-70">Iron & Thread</Link>
-          <span className="text-sm text-gray-400 font-mono uppercase tracking-widest">Chapter {slug}</span>
+          <Link href="/" className="font-serif font-bold text-lg">Iron & Thread</Link>
+          <span className="text-sm text-gray-400 font-mono uppercase tracking-widest">
+            Reading Mode
+          </span>
         </div>
       </nav>
 
-      <article className="max-w-2xl mx-auto py-16 px-6 sm:px-0">
-        {/* Pulling title from the front_matter JSONB column */}
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl sm:text-5xl font-serif font-bold text-gray-900 mb-4">
-            {chapter.front_matter?.title || `Chapter ${slug}`}
-          </h1>
-          {chapter.published_at && (
-            <time className="text-gray-400 text-sm italic">
-              {new Date(chapter.published_at).toLocaleDateString(undefined, { dateStyle: 'long' })}
-            </time>
+      <div className="max-w-2xl mx-auto px-6 sm:px-0">
+        {chapters.map((ch, idx) => (
+          <article key={ch.slug} className="py-16 border-b border-gray-50 last:border-0">
+            <header className="mb-12 text-center">
+              <h1 className="text-4xl sm:text-5xl font-serif font-bold text-gray-900 mb-4">
+                {ch.front_matter?.title || `Chapter ${ch.slug}`}
+              </h1>
+              <time className="text-gray-400 text-sm italic">
+                {new Date(ch.published_at).toLocaleDateString(undefined, { dateStyle: 'long' })}
+              </time>
+              <div className="mt-6 h-1 w-20 bg-black mx-auto"></div>
+            </header>
+
+            <section className="prose prose-slate lg:prose-xl prose-headings:font-serif prose-p:leading-relaxed mx-auto">
+              <ReactMarkdown>{ch.content}</ReactMarkdown>
+            </section>
+          </article>
+        ))}
+
+        {/* Scroll Target */}
+        <div ref={ref} className="h-40 flex flex-col items-center justify-center pb-20">
+          {isPending && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-6 h-6 border-2 border-t-transparent border-black rounded-full animate-spin" />
+              <p className="text-sm italic text-gray-400">Loading next chapter...</p>
+            </div>
           )}
-          <div className="mt-6 h-1 w-20 bg-black mx-auto"></div>
-        </header>
-
-        {/* The Markdown Content rendered as HTML */}
-        <section 
-          className="prose prose-slate lg:prose-xl prose-headings:font-serif prose-p:leading-relaxed mx-auto"
-        >
-          <ReactMarkdown>{chapter.content}</ReactMarkdown>
-        </section>
-
-        <footer className="mt-20 pt-10 border-t border-gray-100 text-center">
-          <Link href="/" className="text-gray-400 hover:text-black transition-colors">
-            End of Chapter {slug}. Back to index.
-          </Link>
-        </footer>
-      </article>
+          {!hasMore && (
+            <p className="text-gray-400 font-serif italic border-t pt-8 w-full text-center">
+              You've reached the end of the current chronicles.
+            </p>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
