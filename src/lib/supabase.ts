@@ -3,19 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 export const createClerkSupabaseClient = (session: any) => {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // This is your 'anon' key
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: {
         fetch: async (url, options = {}) => {
-          const clerkToken = await session.getToken({ template: 'supabase' });
+          // REMOVED: { template: 'supabase' }
+          // The native integration uses the default session token.
+          const token = await session.getToken();
 
-          // THE FIX: Explicitly set both headers
           const headers = new Headers(options.headers);
           
-          // 1. Authorization header MUST be the Clerk JWT (trimmed)
-          headers.set('Authorization', `Bearer ${clerkToken?.trim()}`);
+          if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+          }
           
-          // 2. apikey header MUST be the Supabase anon key
+          // Still need to send the apikey so Supabase knows which project
           headers.set('apikey', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
           return fetch(url, {
