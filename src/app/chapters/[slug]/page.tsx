@@ -4,6 +4,7 @@ import { useSession, SignInButton } from '@clerk/nextjs';
 import { useEffect, useState, use } from 'react';
 import { createClerkSupabaseClient } from '@/lib/supabase';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 
 export default function ChapterPage({ params }: { params: Promise<{ slug: string }> }) {
   // 1. Unwrap the dynamic route params
@@ -104,12 +105,13 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
         {/* The Markdown Content rendered as HTML */}
         <section 
           className="prose prose-slate lg:prose-xl prose-headings:font-serif prose-p:leading-relaxed mx-auto"
-          dangerouslySetInnerHTML={{ __html: chapter.content }} 
-        />
-        
+        >
+          <ReactMarkdown>{chapter.content}</ReactMarkdown>
+        </section>
+
         <footer className="mt-20 pt-10 border-t border-gray-100 text-center">
           <Link href="/" className="text-gray-400 hover:text-black transition-colors">
-            End of Chapter {slug}. Back to index?
+            End of Chapter {slug}. Back to index.
           </Link>
         </footer>
       </article>
