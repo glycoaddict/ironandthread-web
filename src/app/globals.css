@@ -24,17 +24,3 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
-
-@layer base {
-  .prose p {
-    text-indent: 2rem; /* The indent size */
-    margin-bottom: 2.5rem; /* The spacing between paragraphs */
-  }
-
-  /* Optional: Don't indent the first paragraph after a heading */
-  .prose h1 + p, 
-  .prose h2 + p {
-    text-indent: 0;
-  }
-}
