@@ -6,6 +6,7 @@ import { createClerkSupabaseClient } from '@/lib/supabase';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { useInView } from 'react-intersection-observer';
+import remarkBreaks from 'remark-breaks';
 
 export default function ChapterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug: initialSlug } = use(params);
@@ -128,7 +129,9 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
                     prose-headings:font-serif
                 "
                 >
-              <ReactMarkdown>{ch.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkBreaks]}>
+                    {ch.content}
+                </ReactMarkdown>
             </section>
           </article>
         ))}
