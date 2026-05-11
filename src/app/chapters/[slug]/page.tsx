@@ -14,10 +14,82 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
   
   // 1. Change single chapter to an Array for infinite scroll
   const [chapters, setChapters] = useState<any[]>([]);
+  const [mediaMap, setMediaMap] = useState<Record<string, string>>({});
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const normalizeMediaKey = (src: string) => src?.split('/').pop()?.toLowerCase() ?? '';
+  const resolveMediaSrc = (src: string) => {
+    if (!src) return src;
+    if (/^https?:\/\//.test(src)) return src;
+    const key = normalizeMediaKey(src);
+    return mediaMap[key] ?? src;
+  };
+
+  const fetchMediaForChapter = async (chapterSlug: string, supabase: any) => {
+    const chapterPattern = `iat${chapterSlug}-%`;
+
+    const { data: mediaRows, error: mediaError } = await supabase
+      .from('media')
+      .select('*')
+      .or(
+        `name.ilike.${chapterPattern},filename.ilike.${chapterPattern},path.ilike.${chapterPattern}`
+      );
+
+    if (mediaError) {
+      console.warn('Could not load chapter media', mediaError);
+      return;
+    }
+
+    if (!mediaRows?.length) return;
+
+    const resolvedRows = await Promise.all(
+      mediaRows.map(async (item: any) => {
+        const source = item.url ?? item.public_url ?? item.download_url ?? item.file_url;
+        if (source) {
+          return {
+            key: normalizeMediaKey(source),
+            url: source,
+          };
+        }
+
+        const fileName = item.path ?? item.filename ?? item.name;
+        if (!fileName) return null;
+
+        const storedPath = fileName.replace(/^\/+/, '');
+        const candidatePath = storedPath.startsWith('content/') ? storedPath : `content/${storedPath}`;
+
+        const { data: signedData, error: signedError } = await supabase
+          .storage
+          .from('content')
+          .createSignedUrl(candidatePath, 60 * 60);
+
+        if (signedError || !signedData?.signedUrl) {
+          const publicData = supabase.storage.from('content').getPublicUrl(candidatePath);
+          return {
+            key: normalizeMediaKey(fileName),
+            url: publicData.data?.publicUrl ?? fileName,
+          };
+        }
+
+        return {
+          key: normalizeMediaKey(fileName),
+          url: signedData.signedUrl,
+        };
+      })
+    );
+
+    const nextMap = resolvedRows.reduce((acc, item) => {
+      if (item?.key && item.url) {
+        acc[item.key] = item.url;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
+    setMediaMap((prev) => ({ ...prev, ...nextMap }));
+  };
 
   // 2. Setup the "Bottom of Page" trigger
   const { ref, inView } = useInView({
@@ -42,6 +114,7 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
 
         if (sbError) throw sbError;
         setChapters([data]);
+        await fetchMediaForChapter(initialSlug, supabase);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -75,6 +148,7 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
 
       if (data) {
         setChapters((prev) => [...prev, data]);
+        await fetchMediaForChapter(nextSlug.toString(), supabase);
         // UX: Update browser URL as reader progresses
         window.history.replaceState(null, '', `/chapters/${nextSlug}`);
       } else {
@@ -99,13 +173,24 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
   }
 
   return (
-    <main className="min-h-screen bg-parchment text-gray-900">
-      <nav className="sticky top-0 z-50 w-full border-b bg-parchment/80 backdrop-blur-md px-6 py-4">
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <Link href="/" className="font-serif font-bold text-lg">Iron & Thread</Link>
-          <span className="text-sm text-gray-400 font-mono uppercase tracking-widest">
-            Reading Mode
-          </span>
+    <main className="min-h-screen text-gray-900">
+      <nav className="sticky top-0 z-50 border-b border-gray-300 bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-center gap-12 text-sm tracking-widest uppercase">
+          <Link href="/" className="text-gray-700 hover:text-gray-900">
+            Iron & Thread
+          </Link>
+          <Link href="/opening-note" className="text-gray-700 hover:text-gray-900">
+            Opening Note
+          </Link>
+          <Link href="/#chapters" className="text-gray-700 hover:text-gray-900">
+            Chapters
+          </Link>
+          <Link href="/gallery" className="text-gray-700 hover:text-gray-900">
+            Gallery
+          </Link>
+          <Link href="/world-notes" className="text-gray-700 hover:text-gray-900">
+            World Notes
+          </Link>
         </div>
       </nav>
 
@@ -136,8 +221,15 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
               <ReactMarkdown 
                     remarkPlugins={[remarkBreaks]}
                     components={{
-                    // If the parser finds a 'br', we can force it to behave
-                    br: () => <span className="block mb-10" /> 
+                      br: () => <span className="block mb-10" />,
+                      img: ({ src, alt, title }) => (
+                        <img
+                          src={resolveMediaSrc(src ?? '')}
+                          alt={alt ?? ''}
+                          title={title}
+                          className="mx-auto my-12 max-w-full rounded-xl"
+                        />
+                      ),
                     }}
                 >
                     {/* Pre-process: Replace single newlines with double newlines 
