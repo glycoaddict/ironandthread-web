@@ -1,15 +1,20 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "tailwindcss-animate";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  /* Define your book fonts here */
+  --font-serif: "EB Garamond", "Georgia", serif;
+  --font-sans: "Inter", sans-serif;
+
+  /* Custom spacing scale if you want specific 'Book' gaps */
+  --spacing-book-tight: 1.5rem;
+  --spacing-book-wide: 3rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,3 +29,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* @layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-serif: "EB Garamond", "Georgia", serif;
+  }
+} */
+
+@layer utilities {
+  /* Manual fix for your indent/spacing if 'prose' feels too restrictive */
+  .book-layout p {
+    text-indent: 2rem;
+    margin-bottom: 2.5rem;
+    line-height: 1.8;
+  }
+  
+  .book-layout p:first-of-type {
+    text-indent: 0;
+  }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');

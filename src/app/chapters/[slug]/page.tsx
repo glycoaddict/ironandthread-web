@@ -124,12 +124,13 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
 
             <section 
                 className="
-                    prose prose-slate lg:prose-xl mx-auto                    
-                    prose-p:leading-loose   /* Increases line-height for easier reading */
-                    prose-headings:font-serif
-                    prose-p:my-10
+                    prose prose-slate lg:prose-xl mx-auto
+                    font-serif
                     prose-p:indent-12 
-                    first-of-type:prose-p:indent-0
+                    prose-p:my-10
+                    prose-p:leading-relaxed
+                    first:prose-p:indent-0
+                    prose-headings:font-serif
                 "
                 >
               <ReactMarkdown 
