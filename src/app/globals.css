@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');
 @import "tailwindcss";
+
 @plugin "@tailwindcss/typography";
 @plugin "tailwindcss-animate";
+
 
 :root {
   --background: #ffffff;
@@ -8,13 +11,15 @@
 }
 
 @theme {
-  /* Define your book fonts here */
   --font-serif: "EB Garamond", "Georgia", serif;
   --font-sans: "Inter", sans-serif;
 
-  /* Custom spacing scale if you want specific 'Book' gaps */
   --spacing-book-tight: 1.5rem;
   --spacing-book-wide: 3rem;
+
+  --color-parchment: #f9f7f2;
+  --color-parchment-dark: #f2eee3; 
+  --color-parchment-grain: #f4f1e8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,12 +35,26 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* @layer base {
-  :root {
-    --font-sans: 'Inter', system-ui, sans-serif;
-    --font-serif: "EB Garamond", "Georgia", serif;
+@layer base {
+  
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    
+    background-color: var(--color-parchment);
+    background-image: 
+      url("https://www.transparenttextures.com/patterns/natural-paper.png"),      
+      radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.02) 100%);
+    
+    background-attachment: fixed;
+    color: #2a2a2a;
+    font-family: var(--font-serif);
+    
+    
+    scroll-behavior: smooth;
   }
-} */
+}
 
 @layer utilities {
   /* Manual fix for your indent/spacing if 'prose' feels too restrictive */
@@ -50,4 +69,4 @@ body {
   }
 }
 
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');
+

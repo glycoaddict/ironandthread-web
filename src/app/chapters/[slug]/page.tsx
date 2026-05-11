@@ -99,8 +99,8 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
   }
 
   return (
-    <main className="min-h-screen bg-white">
-      <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md px-6 py-4">
+    <main className="min-h-screen bg-parchment text-gray-900">
+      <nav className="sticky top-0 z-50 w-full border-b bg-parchment/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <Link href="/" className="font-serif font-bold text-lg">Iron & Thread</Link>
           <span className="text-sm text-gray-400 font-mono uppercase tracking-widest">
