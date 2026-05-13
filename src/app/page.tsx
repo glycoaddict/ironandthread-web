@@ -80,11 +80,14 @@ export default function Home() {
             >
               Start Reading
             </Link>
-            <button className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase">
-              Opening Note
-            </button>
             <Link
-              href="#chapters"
+              href="/opening-note"
+              className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center"
+            >
+              Opening Note
+            </Link>
+            <Link
+              href="/#chapters"
               className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center"
             >
               Chapters
@@ -104,7 +107,7 @@ export default function Home() {
 
         {/* Chapters Section */}
         <div className="mt-32 border-t border-gray-300 pt-12">
-          <h2 className="text-2xl font-serif text-center mb-2">Chapters</h2>
+          <h2 id="chapters" className="text-2xl font-serif text-center mb-2">Chapters</h2>
           <p className="text-sm font-serif text-center text-gray-600 mb-12 max-w-2xl mx-auto">
             Read the opening chapters of Iron and Thread below. This first version of the site contains the first two chapters in full. The complete structure is planned for twenty-five chapters.
           </p>

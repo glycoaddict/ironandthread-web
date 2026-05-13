@@ -149,21 +149,15 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
 
 
   return (
-    <main className="min-h-screen text-gray-900">
+    <main className="min-h-screen text-gray-900 bg-parchment">
       <nav className="sticky top-0 z-50 border-b border-gray-300 bg-parchment">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-center gap-12 text-sm tracking-widest uppercase">
           <Link href="/" className="text-gray-700 hover:text-gray-900">
             Iron & Thread
-          </Link>
-          <Link href="/opening-note" className="text-gray-700 hover:text-gray-900">
-            Opening Note
-          </Link>
+          </Link>          
           <Link href="/#chapters" className="text-gray-700 hover:text-gray-900">
             Chapters
-          </Link>
-          <Link href="/gallery" className="text-gray-700 hover:text-gray-900">
-            Gallery
-          </Link>
+          </Link>          
           <Link href="/world-notes" className="text-gray-700 hover:text-gray-900">
             World Notes
           </Link>
