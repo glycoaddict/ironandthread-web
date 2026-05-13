@@ -46,7 +46,7 @@ export default function Home() {
           <Link href="/opening-note" className="text-gray-700 hover:text-gray-900">
             Opening Note
           </Link>
-          <Link href="/chapters" className="text-gray-700 hover:text-gray-900">
+          <Link href="/#chapters" className="text-gray-700 hover:text-gray-900">
             Chapters
           </Link>
           <Link href="/gallery" className="text-gray-700 hover:text-gray-900">
