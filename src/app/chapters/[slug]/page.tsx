@@ -2,7 +2,7 @@
 
 import { useSession, SignInButton } from '@clerk/nextjs';
 import { useEffect, useState, use, useTransition } from 'react';
-import { createClerkSupabaseClient } from '@/lib/supabase';
+import { createClerkSupabaseClient, getSupabaseImageUrl } from '@/lib/supabase';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { useInView } from 'react-intersection-observer';
@@ -20,76 +20,47 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const normalizeMediaKey = (src: string) => src?.split('/').pop()?.toLowerCase() ?? '';
-  const resolveMediaSrc = (src: string) => {
-    if (!src) return src;
+  const normalizeMediaKey = (src: string | Blob) => {
+    if (typeof src !== 'string') return '';
+    return src.split('/').pop()?.toLowerCase() ?? '';
+  };
+
+  const resolveMediaSrc = (src: string | Blob | undefined) => {
+    if (!src) return '';
+    if (typeof src !== 'string') {
+      return URL.createObjectURL(src);
+    }
     if (/^https?:\/\//.test(src)) return src;
     const key = normalizeMediaKey(src);
     return mediaMap[key] ?? src;
   };
 
-  const fetchMediaForChapter = async (chapterSlug: string, supabase: any) => {
-    const chapterPattern = `iat${chapterSlug}-%`;
+  const processChapterContent = async (content: string, chapterSlug: string) => {
+    const pattern = new RegExp(`\\[iat${chapterSlug}-\\d+\\.[a-zA-Z0-9]+\\]`, 'g');
+    const matches = content.match(pattern);
 
-    const { data: mediaRows, error: mediaError } = await supabase
-      .from('media')
-      .select('*')
-      .or(
-        `name.ilike.${chapterPattern},filename.ilike.${chapterPattern},path.ilike.${chapterPattern}`
-      );
+    if (!matches || !session) return content;
 
-    if (mediaError) {
-      console.warn('Could not load chapter media', mediaError);
-      return;
+    let processedContent = content;
+
+    // Replace each placeholder with markdown image using a signed URL from the images/media folder
+    for (const match of matches) {
+      const fileName = match.slice(1, -1); // remove [ and ]
+      try {
+        const signedUrl = await getSupabaseImageUrl(session, `media/${fileName}`, 'images');
+        if (signedUrl) {
+          const imageMarkdown = `![${fileName}](${signedUrl})`;
+          processedContent = processedContent.split(match).join(imageMarkdown);
+        }
+      } catch (err) {
+        console.warn('Error resolving inline image', match, err);
+      }
     }
 
-    if (!mediaRows?.length) return;
-
-    const resolvedRows = await Promise.all(
-      mediaRows.map(async (item: any) => {
-        const source = item.url ?? item.public_url ?? item.download_url ?? item.file_url;
-        if (source) {
-          return {
-            key: normalizeMediaKey(source),
-            url: source,
-          };
-        }
-
-        const fileName = item.path ?? item.filename ?? item.name;
-        if (!fileName) return null;
-
-        const storedPath = fileName.replace(/^\/+/, '');
-        const candidatePath = storedPath.startsWith('content/') ? storedPath : `content/${storedPath}`;
-
-        const { data: signedData, error: signedError } = await supabase
-          .storage
-          .from('content')
-          .createSignedUrl(candidatePath, 60 * 60);
-
-        if (signedError || !signedData?.signedUrl) {
-          const publicData = supabase.storage.from('content').getPublicUrl(candidatePath);
-          return {
-            key: normalizeMediaKey(fileName),
-            url: publicData.data?.publicUrl ?? fileName,
-          };
-        }
-
-        return {
-          key: normalizeMediaKey(fileName),
-          url: signedData.signedUrl,
-        };
-      })
-    );
-
-    const nextMap = resolvedRows.reduce((acc, item) => {
-      if (item?.key && item.url) {
-        acc[item.key] = item.url;
-      }
-      return acc;
-    }, {} as Record<string, string>);
-
-    setMediaMap((prev) => ({ ...prev, ...nextMap }));
+    return processedContent;
   };
+
+
 
   // 2. Setup the "Bottom of Page" trigger
   const { ref, inView } = useInView({
@@ -113,8 +84,10 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
           .single();
 
         if (sbError) throw sbError;
-        setChapters([data]);
-        await fetchMediaForChapter(initialSlug, supabase);
+        // Process inline image placeholders in content
+        const processedContent = await processChapterContent(data.content ?? '', initialSlug);
+        setChapters([{ ...data, content: processedContent }]);
+        
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -147,8 +120,9 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
         .maybeSingle();
 
       if (data) {
-        setChapters((prev) => [...prev, data]);
-        await fetchMediaForChapter(nextSlug.toString(), supabase);
+        const processedContent = await processChapterContent(data.content ?? '', nextSlug.toString());
+        setChapters((prev) => [...prev, { ...data, content: processedContent }]);
+        
         // UX: Update browser URL as reader progresses
         window.history.replaceState(null, '', `/chapters/${nextSlug}`);
       } else {
@@ -172,9 +146,11 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
     );
   }
 
+
+
   return (
     <main className="min-h-screen text-gray-900">
-      <nav className="sticky top-0 z-50 border-b border-gray-300 bg-white">
+      <nav className="sticky top-0 z-50 border-b border-gray-300 bg-parchment">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-center gap-12 text-sm tracking-widest uppercase">
           <Link href="/" className="text-gray-700 hover:text-gray-900">
             Iron & Thread
@@ -224,7 +200,7 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
                       br: () => <span className="block mb-10" />,
                       img: ({ src, alt, title }) => (
                         <img
-                          src={resolveMediaSrc(src ?? '')}
+                          src={resolveMediaSrc(src ?? 'k')}
                           alt={alt ?? ''}
                           title={title}
                           className="mx-auto my-12 max-w-full rounded-xl"

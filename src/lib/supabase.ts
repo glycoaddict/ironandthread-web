@@ -7,7 +7,7 @@ export const createClerkSupabaseClient = (session: any) => {
     {
       global: {
         fetch: async (url, options = {}) => {
-          // REMOVED: { template: 'supabase' }
+          
           // The native integration uses the default session token.
           const token = await session.getToken();
 
@@ -28,4 +28,39 @@ export const createClerkSupabaseClient = (session: any) => {
       },
     }
   );
+};
+
+export const getSupabaseImageUrl = async (
+  session: any,
+  src: string,
+  bucketName: string = 'content',
+  expirySeconds: number = 3600
+): Promise<string | undefined> => {
+  if (!session) return undefined;
+
+  try {
+    const supabase = createClerkSupabaseClient(session);
+    const cleanedPath = src.replace(/^\/+/, '');
+
+    // console.warn(`Getting signed URL for ${cleanedPath} in bucket ${bucketName}`);
+    
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(cleanedPath, expirySeconds);
+
+    if (error) {
+      console.warn(`Could not create signed URL for ${cleanedPath}:`, error);
+      return undefined;
+    }
+
+    if (!data?.signedUrl) {
+      console.warn(`Signed URL response missing for ${cleanedPath} in bucket ${bucketName}`);
+      return undefined;
+    }
+
+    return data.signedUrl;
+  } catch (err) {
+    console.warn(`Error getting signed URL for ${src}:`, err);
+    return undefined;
+  }
 };
