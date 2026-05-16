@@ -15,6 +15,11 @@ const chapters = [
     title: 'Syasha',
     number: 'TWO',
   },
+  {
+    id: 3,
+    title: 'Kava of Takga',
+    number: 'THREE',
+  },
 ];
 
 export default function Home() {
