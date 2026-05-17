@@ -1,23 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
-export const createClerkSupabaseClient = (session: any) => {
-  return createClient(
+let supabaseClient: any = null;
+let getToken: (() => Promise<string | null>) | null = null;
+
+const createClerkSupabaseClientInternal = () =>
+  createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: {
+        persistSession: false,
+        detectSessionInUrl: false,
+        autoRefreshToken: false,
+      },
       global: {
         fetch: async (url, options = {}) => {
-          
-          // The native integration uses the default session token.
-          const token = await session.getToken();
+          const token = getToken ? await getToken() : null;
 
           const headers = new Headers(options.headers);
-          
           if (token) {
             headers.set('Authorization', `Bearer ${token}`);
           }
-          
-          // Still need to send the apikey so Supabase knows which project
+
           headers.set('apikey', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
           return fetch(url, {
@@ -28,22 +32,35 @@ export const createClerkSupabaseClient = (session: any) => {
       },
     }
   );
+
+export const createClerkSupabaseClient = (session: any): any => {
+  getToken = async () => await session.getToken();
+  if (!supabaseClient) {
+    supabaseClient = createClerkSupabaseClientInternal();
+  }
+  return supabaseClient;
 };
 
+// Alias for reuse in any component or route. This returns the shared
+// browser Supabase client while keeping auth token resolution dynamic.
+export const getSupabaseClient = createClerkSupabaseClient;
+
 export const getSupabaseImageUrl = async (
-  session: any,
+  supabase: ReturnType<typeof createClerkSupabaseClient> | null,
   src: string,
   bucketName: string = 'content',
   expirySeconds: number = 3600
 ): Promise<string | undefined> => {
-  if (!session) return undefined;
+  if (!supabase) return undefined;
 
   try {
-    const supabase = createClerkSupabaseClient(session);
     const cleanedPath = src.replace(/^\/+/, '');
 
-    // console.warn(`Getting signed URL for ${cleanedPath} in bucket ${bucketName}`);
-    
+    if (!cleanedPath || cleanedPath.endsWith('/')) {
+      console.warn(`Skipping signed URL request for invalid storage path: ${cleanedPath}`);
+      return undefined;
+    }
+
     const { data, error } = await supabase.storage
       .from(bucketName)
       .createSignedUrl(cleanedPath, expirySeconds);
