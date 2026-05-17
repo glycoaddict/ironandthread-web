@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, SignInButton } from '@clerk/nextjs';
-import { useEffect, useState, use, useTransition } from 'react';
+import { useEffect, useState, useMemo, use, useTransition } from 'react';
 import { createClerkSupabaseClient, getSupabaseImageUrl } from '@/lib/supabase';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -11,6 +11,10 @@ import remarkBreaks from 'remark-breaks';
 export default function ChapterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug: initialSlug } = use(params);
   const { session, isLoaded } = useSession();
+  const supabase = useMemo(
+    () => (session ? createClerkSupabaseClient(session) : null),
+    [session]
+  );
   
   // 1. Change single chapter to an Array for infinite scroll
   const [chapters, setChapters] = useState<any[]>([]);
@@ -35,19 +39,25 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
     return mediaMap[key] ?? src;
   };
 
-  const processChapterContent = async (content: string, chapterSlug: string) => {
+  const processChapterContent = async (
+    supabase: ReturnType<typeof createClerkSupabaseClient> | null,
+    content: string,
+    chapterSlug: string
+  ) => {
     const pattern = new RegExp(`\\[iat${chapterSlug}-\\d+\\.[a-zA-Z0-9]+\\]`, 'g');
     const matches = content.match(pattern);
 
-    if (!matches || !session) return content;
+    if (!matches || !supabase) return content;
 
     let processedContent = content;
 
     // Replace each placeholder with markdown image using a signed URL from the images/media folder
     for (const match of matches) {
-      const fileName = match.slice(1, -1); // remove [ and ]
+      const fileName = match.slice(1, -1).trim(); // remove [ and ]
+      if (!fileName) continue;
+
       try {
-        const signedUrl = await getSupabaseImageUrl(session, `media/${fileName}`, 'images');
+        const signedUrl = await getSupabaseImageUrl(supabase, `media/${fileName}`, 'images');
         if (signedUrl) {
           const imageMarkdown = `![${fileName}](${signedUrl})`;
           processedContent = processedContent.split(match).join(imageMarkdown);
@@ -75,8 +85,9 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
     }
 
     const fetchInitial = async () => {
+      if (!supabase) return;
+
       try {
-        const supabase = createClerkSupabaseClient(session);
         const { data, error: sbError } = await supabase
           .from('chapters')
           .select('*')
@@ -85,7 +96,7 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
 
         if (sbError) throw sbError;
         // Process inline image placeholders in content
-        const processedContent = await processChapterContent(data.content ?? '', initialSlug);
+        const processedContent = await processChapterContent(supabase, data.content ?? '', initialSlug);
         setChapters([{ ...data, content: processedContent }]);
         
       } catch (err: any) {
@@ -107,12 +118,11 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
 
   const loadNextChapter = () => {
     startTransition(async () => {
-      if (!session) return;
+      if (!supabase) return;
       
       const lastSlug = parseInt(chapters[chapters.length - 1].slug);
       const nextSlug = lastSlug + 1;
       
-      const supabase = createClerkSupabaseClient(session);
       const { data } = await supabase
         .from('chapters')
         .select('*')
@@ -120,7 +130,7 @@ export default function ChapterPage({ params }: { params: Promise<{ slug: string
         .maybeSingle();
 
       if (data) {
-        const processedContent = await processChapterContent(data.content ?? '', nextSlug.toString());
+        const processedContent = await processChapterContent(supabase, data.content ?? '', nextSlug.toString());
         setChapters((prev) => [...prev, { ...data, content: processedContent }]);
         
         // UX: Update browser URL as reader progresses
