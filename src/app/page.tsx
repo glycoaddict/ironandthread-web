@@ -1,8 +1,8 @@
 'use client';
-import { getSupabaseImageUrl } from '@/lib/supabase';
+import { createClerkSupabaseClient, getSupabaseImageUrl } from '@/lib/supabase';
 import Link from 'next/link';
-import { useSession } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { SignInButton, useSession } from '@clerk/nextjs';
+import { useEffect, useMemo, useState } from 'react';
 
 const chapters = [
   {
@@ -24,40 +24,44 @@ const chapters = [
 
 export default function Home() {
   const { session, isLoaded } = useSession();
+  const supabase = useMemo(
+    () => (session ? createClerkSupabaseClient(session) : null),
+    [session]
+  );
   const [thematicImageUrl, setThematicImageUrl] = useState<string | undefined>();
   const [thematicImageUrl2, setThematicImageUrl2] = useState<string | undefined>();
 
   useEffect(() => {
-    if (!isLoaded || !session) return;
+    if (!isLoaded || !supabase) return;
 
     (async () => {
-      const [url1] = await Promise.all([        
-        getSupabaseImageUrl(session, 'media/iat0-1.png', 'images'),
+      const [url1] = await Promise.all([
+        getSupabaseImageUrl(supabase, 'media/iat0-1.png', 'images'),
       ]);
 
-      setThematicImageUrl(url1 ?? undefined);      
+      setThematicImageUrl(url1 ?? undefined);
     })();
-  }, [session, isLoaded]);
+  }, [supabase, isLoaded]);
 
 
   return (
     <div className="min-h-screen flex flex-col bg-parchment">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-gray-300 bg-parchment">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-center gap-12 text-sm tracking-widest uppercase">
-          <Link href="/" className="text-gray-700 hover:text-gray-900">
+      <nav aria-label="Main navigation" className="sticky top-0 z-50 border-b border-gray-300 bg-parchment">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-center gap-4 md:gap-12 text-sm tracking-widest uppercase">
+          <Link href="/" className="text-gray-700 hover:text-gray-900 whitespace-nowrap">
             Iron & Thread
           </Link>
-          <Link href="/opening-note" className="text-gray-700 hover:text-gray-900">
+          <Link href="/opening-note" className="text-gray-700 hover:text-gray-900 whitespace-nowrap">
             Opening Note
           </Link>
-          <Link href="/#chapters" className="text-gray-700 hover:text-gray-900">
+          <Link href="/#chapters" className="text-gray-700 hover:text-gray-900 whitespace-nowrap">
             Chapters
           </Link>
-          <Link href="/gallery" className="text-gray-700 hover:text-gray-900">
+          <Link href="/gallery" className="hidden md:inline-block text-gray-700 hover:text-gray-900 whitespace-nowrap">
             Gallery
           </Link>
-          <Link href="/world-notes" className="text-gray-700 hover:text-gray-900">
+          <Link href="/world-notes" className="hidden lg:inline-block text-gray-700 hover:text-gray-900 whitespace-nowrap">
             World Notes
           </Link>
         </div>
@@ -79,6 +83,13 @@ export default function Home() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            {!session && (
+              <SignInButton mode="modal">
+                <button className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center">
+                  Sign In
+                </button>
+              </SignInButton>
+            )}
             <Link
               href="/chapters/1"
               className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center"
@@ -104,7 +115,7 @@ export default function Home() {
         <div className="mx-auto mb-10 w-full max-w-3xl">          
           <img
             src={thematicImageUrl ?? '/placeholder-divider.jpeg'}
-            alt="Thematic divider illustration"
+            alt="Sign in to view content!"
             className="w-full rounded-3xl border border-gray-200 shadow-sm"
           />
 
