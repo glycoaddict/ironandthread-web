@@ -32,7 +32,7 @@ export default function Home() {
 
     (async () => {
       const [url1] = await Promise.all([        
-        getSupabaseImageUrl(session, 'media/iat1-1.png', 'images'),
+        getSupabaseImageUrl(session, 'media/iat0-1.png', 'images'),
       ]);
 
       setThematicImageUrl(url1 ?? undefined);      
@@ -66,7 +66,7 @@ export default function Home() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-20">
         {/* Hero Section */}
         <div className="text-center mb-20">
-          <h1 className="text-6xl font-serif tracking-wide mb-4">
+          <h1 className="text-6xl font-serif font-bold tracking-wide mb-4 text-black">
             Iron & Thread
           </h1>
           <p className="text-sm tracking-widest uppercase text-gray-600 mb-6">
@@ -112,9 +112,9 @@ export default function Home() {
 
         {/* Chapters Section */}
         <div className="mt-32 border-t border-gray-300 pt-12">
-          <h2 id="chapters" className="text-2xl font-serif text-center mb-2">Chapters</h2>
+          <h2 id="chapters" className="text-2xl font-serif text-center mb-2 text-black">Chapters</h2>
           <p className="text-sm font-serif text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            Read the opening chapters of Iron and Thread below. This first version of the site contains the first two chapters in full. The complete structure is planned for twenty-five chapters.
+            Read the available chapters of Iron and Thread below.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
@@ -135,7 +135,7 @@ export default function Home() {
           </div>
 
           <p className="text-center text-sm text-gray-600 mt-12">
-            Chapters Three through Twenty-Five are coming later.
+            Watch this space for more chapters as they become available!
           </p>
         </div>
       </main>
