@@ -1,7 +1,7 @@
 'use client';
-import Link from 'next/link';
 import { createClerkSupabaseClient, getSupabaseImageUrl } from '@/lib/supabase';
 import { SignInButton, useSession } from '@clerk/nextjs';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function Home() {
