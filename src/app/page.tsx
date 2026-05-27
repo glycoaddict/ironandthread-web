@@ -62,7 +62,7 @@ export default function Home() {
 
     (async () => {
       const [url1] = await Promise.all([
-        getSupabaseImageUrl(supabase, 'media/iat0-1.png', 'images'),
+        getSupabaseImageUrl(supabase, 'media/iat0-1.avif', 'images'),
       ]);
 
       setThematicImageUrl(url1 ?? undefined);
@@ -143,7 +143,7 @@ export default function Home() {
         {/* Thematic Divider */}
         <div className="mx-auto mb-10 w-full max-w-3xl">          
           <img
-            src={thematicImageUrl ?? 'https://btezhegwnxgaruqtdguu.supabase.co/storage/v1/object/public/content/iat0-1.png'}
+            src={thematicImageUrl ?? 'https://btezhegwnxgaruqtdguu.supabase.co/storage/v1/object/public/content/iat0-1.avif'}
             alt="Sign in to view content!"
             className="w-full rounded-3xl border border-gray-200 shadow-sm"
           />
