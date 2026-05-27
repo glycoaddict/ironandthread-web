@@ -118,17 +118,19 @@ export default function Home() {
             ) : (
               <>
                 <Link
-                  href="/chapters/1"
+                  href="/#chapters"
                   className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center"
                 >
                   Start Reading
                 </Link>
+
                 <Link
                   href="/opening-note"
                   className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center"
                 >
                   Opening Note
                 </Link>
+                
                 <Link
                   href="/#chapters"
                   className="px-8 py-2 border border-gray-700 text-gray-700 hover:bg-gray-50 text-sm tracking-widest uppercase text-center"
